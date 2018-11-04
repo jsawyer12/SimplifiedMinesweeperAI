@@ -2,6 +2,18 @@ import java.util.Scanner;
 
 public class Main {
 
+    public static int[] randomProbingStrategy(World world) {
+        int[] coords = new int[2];
+        boolean coordsAreGood = false;
+        while (!coordsAreGood) {
+            coords[0] = (int) (Math.random() * world.length);
+            coords[1] = (int) (Math.random() * world.length);
+            if (world.displMap[coords[0]][coords[1]] == "+")
+                coordsAreGood = true;
+        }
+        return coords;
+    }
+
     public static int[] getCoords(String in) {
         String[] moveSpl = in.split(" ");
         int[] coords = new int[2];
@@ -32,12 +44,12 @@ public class Main {
                         if (world.map[i][j] == "0" && (i != coords[0] || j != coords[1])) {
                             uncoverCells(world, new int[]{i, j}); // use for uncovering all adjacent cells with 0 for minesweeper
                         }
-                        System.out.print(" " +world.displMap[i][j]);
+//                        System.out.print(" " +world.displMap[i][j]);
                     }
                 }
-                System.out.println();
+//                System.out.println();
             }
-            System.out.println();
+//            System.out.println();
         }
         if (world.map[coords[0]][coords[1]] == "d")
             live = -1;
@@ -58,14 +70,23 @@ public class Main {
 
     public static void playGame(World world, int lives) {
         Scanner userIn = new Scanner(System.in);
+        int moves = 0;
         while (!gameIsOver(lives)) {
             world.printWorld();
             System.out.println("Player lives: " +lives);
-            System.out.print("Input coords: ");
-            String move = userIn.nextLine();
-            System.out.println();
-            int[] coords = getCoords(move);
+//            System.out.print("Input coords: ");
+//            String move = userIn.nextLine();
+//            System.out.println();
+//            int[] coords = getCoords(move); // for user input and game testing
+            int[] coords = randomProbingStrategy(world);
+            if (moves == 0) {
+                coords[0] = 0;
+                coords[1] = 0;
+            }
+            System.out.println("Trying x = " +coords[1] +", y = " +coords[0]);
             lives += uncoverCells(world, coords);
+            moves++;
+            System.out.println();
         }
         userIn.close();
     }
@@ -74,8 +95,6 @@ public class Main {
 
         int lives = 1;
         World world = World.EASY1;
-        Part1 part1 = new Part1(world);
-//        World.EASY1.printWorld();
         playGame(world, lives);
     }
 }
