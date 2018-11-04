@@ -25,11 +25,15 @@ public class Main {
                 endX = world.length - 1;
             for (int i = startY; i <= endY; i++) {
                 for (int j = startX; j <= endX; j++) {
-                    if (world.map[i][j] == "0") {
+                    if (world.map[i][j] == "g") // MAKE SURE THIS WORKS ////////////////////////////////////////////
+                        live++;
+                    if (world.displMap[i][j] == "+") {
                         world.displMap[i][j] = world.map[i][j];
-//                    uncoverCells(world, new int[]{i, j}); // use for uncovering all adjacent cells with 0 for minesweeper
+                        if (world.map[i][j] == "0" && (i != coords[0] || j != coords[1])) {
+                            uncoverCells(world, new int[]{i, j}); // use for uncovering all adjacent cells with 0 for minesweeper
+                        }
+                        System.out.print(" " +world.displMap[i][j]);
                     }
-                    System.out.print(" " +world.displMap[i][j]);
                 }
                 System.out.println();
             }
@@ -56,6 +60,7 @@ public class Main {
         Scanner userIn = new Scanner(System.in);
         while (!gameIsOver(lives)) {
             world.printWorld();
+            System.out.println("Player lives: " +lives);
             System.out.print("Input coords: ");
             String move = userIn.nextLine();
             System.out.println();
