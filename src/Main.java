@@ -1,103 +1,89 @@
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class Main {
 
-    public static int[] singlePointStrategy(World world) {
-        int[] coords = new int[2];
-        for (int i = 0; i < world.length; i++) {
-            for(int j = 0; j < world.length; j++) {
-                if (world.displMap[i][j] == "+") {
-
+    public static void uncoverCells(World world, Agent agent, int[] coords) {
+        if (world.map[coords[0]][coords[1]] == "0") {
+            int[] stspCoords = getStartStopCoords(coords, world); // get top left and bottom left cell coords for search
+            for (int i = stspCoords[0]; i <= stspCoords[1]; i++) {
+                for (int j = stspCoords[2]; j <= stspCoords[3]; j++) {
+                    int[] tempCoords = new int[]{i, j};
+                    if (world.map[i][j] == "0" && agent.getCell(tempCoords) == "+") {// && (i != coords[0] || j != coords[1])) {
+                        agent.adjustMap(tempCoords, world.map[i][j]);
+                        uncoverCells(world, agent, tempCoords); // use for uncovering all adjacent cells with 0 for adjacent 0's
+                    }
+                    else
+                        agent.adjustMap(tempCoords, world.map[i][j]);
                 }
             }
         }
-        return coords;
+        else
+            agent.adjustMap(coords, world.map[coords[0]][coords[1]]);
     }
 
-    public static int[] randomProbingStrategy(World world) {
-        int[] coords = new int[2];
-        boolean coordsAreGood = false;
-        while (!coordsAreGood) {
-            coords[0] = (int) (Math.random() * world.length);
-            coords[1] = (int) (Math.random() * world.length);
-            if (world.displMap[coords[0]][coords[1]] == "+")
-                coordsAreGood = true;
-        }
-        return coords;
+    public static int[] getStartStopCoords(int[] coords, World world) {
+        int[] stspCoords = new int[4]; // [startY, endY, startX, endX]
+        stspCoords[0] = coords[0] - 1;
+        stspCoords[1] = coords[0] + 1;
+        if (stspCoords[0] < 0)
+            stspCoords[0] = 0;
+        if (stspCoords[1] >= world.length)
+            stspCoords[1] = world.length - 1;
+        stspCoords[2] = coords[1] - 1;
+        stspCoords[3] = coords[1] + 1;
+        if (stspCoords[2] < 0)
+            stspCoords[2] = 0;
+        if (stspCoords[3] >= world.length)
+            stspCoords[3] = world.length - 1;
+        return stspCoords;
     }
 
     public static int[] getCoords(String in) {
-        String[] moveSpl = in.split(" ");
         int[] coords = new int[2];
-        coords[0] = Integer.parseInt(moveSpl[0]); // y coordinate
-        coords[1] = Integer.parseInt(moveSpl[1]); // x coordinate
-        return coords;
-    }
-
-    public static int uncoverCells(World world, int[] coords) {
-        int live = 0; // either adds a life if gold is found, subtracts if dagger is found, and stays at 0 if anything else is found at current coords choice
-        if (world.map[coords[0]][coords[1]] == "0") {
-            int startY = coords[0] - 1, endY = coords[0] + 1;
-            if (startY < 0)
-                startY = 0;
-            if (endY >= world.length)
-                endY = world.length - 1;
-            int startX = coords[1] - 1, endX = coords[1] + 1;
-            if (startX < 0)
-                startX = 0;
-            if (endX >= world.length)
-                endX = world.length - 1;
-            for (int i = startY; i <= endY; i++) {
-                for (int j = startX; j <= endX; j++) {
-                    if (world.map[i][j] == "g") // MAKE SURE THIS WORKS ////////////////////////////////////////////
-                        live++;
-                    if (world.displMap[i][j] == "+") {
-                        world.displMap[i][j] = world.map[i][j];
-                        if (world.map[i][j] == "0" && (i != coords[0] || j != coords[1])) {
-                            uncoverCells(world, new int[]{i, j}); // use for uncovering all adjacent cells with 0 for minesweeper
-                        }
-//                        System.out.print(" " +world.displMap[i][j]);
-                    }
-                }
-//                System.out.println();
-            }
-//            System.out.println();
+        try {
+            String[] moveSpl = in.split(" ");
+            coords[1] = Integer.parseInt(moveSpl[0]); // y coordinate
+            coords[0] = Integer.parseInt(moveSpl[1]); // x coordinate
+        } catch (ArrayIndexOutOfBoundsException e) {
+            System.out.println("Invalid input");
+        } finally {
+            return coords;
         }
-        if (world.map[coords[0]][coords[1]] == "d")
-            live = -1;
-        if (world.map[coords[0]][coords[1]] == "g")
-            live = 1;
-        world.displMap[coords[0]][coords[1]] = world.map[coords[0]][coords[1]];
-        return live;
     }
 
-    public static boolean gameIsOver(int lives) {
+    public static boolean gameIsOver(Agent agent) {
         boolean gameOver = false;
-        if (lives == 0) {
+        if (agent.getLives() == 0) {
             gameOver = true;
+            agent.printWorld();
             System.out.println("You died!");
+        }
+        if (agent.getCellsLeft() == 0) {
+            gameOver = true;
+            System.out.println("YOU WIN");
         }
         return gameOver;
     }
 
-    public static void playGame(World world, int lives) {
+    public static void playGame(World world, Agent agent) {
         Scanner userIn = new Scanner(System.in);
-        int moves = 0;
-        while (!gameIsOver(lives)) {
-            world.printWorld();
-            System.out.println("Player lives: " +lives);
+        uncoverCells(world, agent, new int[]{0, 0});
+        while (!gameIsOver(agent)) {
+            agent.printWorld();
+            System.out.println("Player lives: " +agent.getLives());
+            System.out.println("Moves left: " +agent.getCellsLeft());
+
 //            System.out.print("Input coords: ");
 //            String move = userIn.nextLine();
 //            System.out.println();
 //            int[] coords = getCoords(move); // for user input and game testing
-            int[] coords = randomProbingStrategy(world);
-            if (moves == 0) {
-                coords[0] = 0;
-                coords[1] = 0;
-            }
+
+            int[] coords = agent.randomProbingStrategy();
+
             System.out.println("Trying x = " +coords[1] +", y = " +coords[0]);
-            lives += uncoverCells(world, coords);
-            moves++;
+            uncoverCells(world, agent, coords);
             System.out.println();
         }
         userIn.close();
@@ -105,8 +91,24 @@ public class Main {
 
     public static void main(String[] args) {
 
-        int lives = 1;
         World world = World.EASY1;
-        playGame(world, lives);
+        Agent stupidAgent = new Agent(world.length);
+
+        playGame(world, stupidAgent);
+
+//        DPLLSatisfiable dpllSatisfiable = new DPLLSatisfiable();
+//
+//        String p="D21";
+//        System.out.println("ProveDanger "+p);
+//        String KBU="((D20 & ~D21 & ~D22) | (~D20 & D21 & ~D22) | (~D20 & ~D21 & D22))
+//                +"& ((D20 & ~D21) | (~D20 & D21)) & ((D21 & ~D22) | (~D21 & D22))";
+//        String prove=KBU+" & ~"+p;
+//        boolean ans = displayDPLLSatisfiableStatus(prove);
+//        System.out.println("Does KBU entail "+p+"?, Test KBU & ~"+p);
+//        if(!ans){//if false mark
+//            System.out.println("Yes, Danger, Mark");
+//        }else{
+//            System.out.println("No");
+//        }
     }
 }

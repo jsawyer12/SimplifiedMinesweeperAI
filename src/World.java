@@ -325,27 +325,11 @@ public enum World{
     });
 
     public final String[][] map;
-    public final String[][] displMap;
     public final int length;
-
-    public void printWorld() {
-        for (int i = 0; i < displMap.length; i++) {
-            for (int j = 0; j < displMap.length; j++) {
-                System.out.print(" " +displMap[i][j]);
-            }
-            System.out.println();
-        }
-    }
 
     World(String[][] map){
         this.map=map;
         this.length = map.length;
-        this.displMap =  new String[map.length][map.length];
-        for (int i = 0; i < map.length; i++) {
-            for (int j = 0; j < map.length; j++) {
-                displMap[i][j] = "+";
-            }
-        }
     }
 
 }
