@@ -2,6 +2,18 @@ import java.util.Scanner;
 
 public class Main {
 
+    public static int[] singlePointStrategy(World world) {
+        int[] coords = new int[2];
+        for (int i = 0; i < world.length; i++) {
+            for(int j = 0; j < world.length; j++) {
+                if (world.displMap[i][j] == "+") {
+
+                }
+            }
+        }
+        return coords;
+    }
+
     public static int[] randomProbingStrategy(World world) {
         int[] coords = new int[2];
         boolean coordsAreGood = false;
