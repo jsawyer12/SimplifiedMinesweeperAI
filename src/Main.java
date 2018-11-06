@@ -1,12 +1,10 @@
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 
 public class Main {
 
     public static void uncoverCells(World world, Agent agent, int[] coords) {
         if (world.map[coords[0]][coords[1]] == "0") {
-            int[] stspCoords = getStartStopCoords(coords, world); // get top left and bottom left cell coords for search
+            int[] stspCoords = agent.getStartStopCoords(coords[1], coords[0]); // get top left and bottom left cell coords for search
             for (int i = stspCoords[0]; i <= stspCoords[1]; i++) {
                 for (int j = stspCoords[2]; j <= stspCoords[3]; j++) {
                     int[] tempCoords = new int[]{i, j};
@@ -21,23 +19,6 @@ public class Main {
         }
         else
             agent.adjustMap(coords, world.map[coords[0]][coords[1]]);
-    }
-
-    public static int[] getStartStopCoords(int[] coords, World world) {
-        int[] stspCoords = new int[4]; // [startY, endY, startX, endX]
-        stspCoords[0] = coords[0] - 1;
-        stspCoords[1] = coords[0] + 1;
-        if (stspCoords[0] < 0)
-            stspCoords[0] = 0;
-        if (stspCoords[1] >= world.length)
-            stspCoords[1] = world.length - 1;
-        stspCoords[2] = coords[1] - 1;
-        stspCoords[3] = coords[1] + 1;
-        if (stspCoords[2] < 0)
-            stspCoords[2] = 0;
-        if (stspCoords[3] >= world.length)
-            stspCoords[3] = world.length - 1;
-        return stspCoords;
     }
 
     public static int[] getCoords(String in) {
@@ -80,7 +61,9 @@ public class Main {
 //            System.out.println();
 //            int[] coords = getCoords(move); // for user input and game testing
 
-            int[] coords = agent.randomProbingStrategy();
+//            int[] coords = agent.randomProbingStrategy();
+
+            int[] coords = agent.singlePointStrategy();
 
             System.out.println("Trying x = " +coords[1] +", y = " +coords[0]);
             uncoverCells(world, agent, coords);
@@ -95,6 +78,8 @@ public class Main {
         Agent stupidAgent = new Agent(world.length);
 
         playGame(world, stupidAgent);
+
+//        final FormulaFactory f = new FormulaFactory();
 
 //        DPLLSatisfiable dpllSatisfiable = new DPLLSatisfiable();
 //
