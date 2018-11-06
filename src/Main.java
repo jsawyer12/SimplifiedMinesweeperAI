@@ -1,3 +1,11 @@
+import org.logicng.datastructures.Tristate;
+import org.logicng.formulas.Formula;
+import org.logicng.formulas.FormulaFactory;
+import org.logicng.io.parsers.ParserException;
+import org.logicng.io.parsers.PropositionalParser;
+import org.logicng.solvers.MiniSat;
+import org.logicng.solvers.SATSolver;
+
 import java.util.Scanner;
 
 public class Main {
@@ -79,21 +87,57 @@ public class Main {
 
         playGame(world, stupidAgent);
 
-//        final FormulaFactory f = new FormulaFactory();
+//        FormulaFactory f = new FormulaFactory();
+//        Variable a = f.variable("D22");
+//        Variable b = f.variable("D23");
+//        Variable c = f.variable("D24");
+//        Literal notC = f.literal("C", false);
+//        Formula formula = f.and(a, f.not(f.or(b, notC)));
 
-//        DPLLSatisfiable dpllSatisfiable = new DPLLSatisfiable();
+        final FormulaFactory f = new FormulaFactory();
+        final PropositionalParser p = new PropositionalParser(f);
+        try {
+            final Formula formula = p.parse("(D22 & ~D23) | (~D22 & D23) & ((D22 & ~D23 & ~D24) | "
+                    +"(~D22 & D23 & ~D24) | (~D22 & ~D23 & D24)) & ((~D22 & ~D24) | (~D23 & D24)) & ~D23");
+            final Formula cnf = formula.cnf();
+            System.out.println(cnf.toString());
+            final SATSolver miniSat = MiniSat.miniSat(f);
+            miniSat.add(formula);
+            final Tristate result = miniSat.sat();
+            System.out.println(result);
+        } catch (ParserException e) {
+            e.printStackTrace();
+        }
+
+
+//        ArrayList<int[]> clauses = new ArrayList<>();
+//        clauses.add(new int[] {-22,22});
+//        clauses.add(new int[] {-22,-23});
+//        clauses.add(new int[] {23,22});
+//        clauses.add(new int[] {23,-23});
+
+
+
+
+//        int MAXVAR = 7;
+//        int NBCLAUSES = 3;
+//        ISolver solver = SolverFactory.newDefault();
+//        solver.newVar(MAXVAR);
+//        solver.setExpectedNumberOfClauses(NBCLAUSES);
 //
-//        String p="D21";
-//        System.out.println("ProveDanger "+p);
-//        String KBU="((D20 & ~D21 & ~D22) | (~D20 & D21 & ~D22) | (~D20 & ~D21 & D22))
-//                +"& ((D20 & ~D21) | (~D20 & D21)) & ((D21 & ~D22) | (~D21 & D22))";
-//        String prove=KBU+" & ~"+p;
-//        boolean ans = displayDPLLSatisfiableStatus(prove);
-//        System.out.println("Does KBU entail "+p+"?, Test KBU & ~"+p);
-//        if(!ans){//if false mark
-//            System.out.println("Yes, Danger, Mark");
-//        }else{
-//            System.out.println("No");
+//        for (int i = 0; i < NBCLAUSES; i++) {
+////            int[] clause =
+//            // get clauses here one by one
+////            solver.addClause(new VecInt(clause));
 //        }
+//
+//        IProblem problem= solver;
+//        if (problem.isSatisfiable()) {
+//
+//        }
+//        else {
+//
+//        }
+
     }
 }

@@ -9,5 +9,8 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="NIGHTLY" level="project" />
     <orderEntry type="library" name="LogicNG-master" level="project" />
+    <orderEntry type="library" name="org.sat4j.core-src" level="project" />
+    <orderEntry type="library" name="logicng-1.4.0" level="project" />
+    <orderEntry type="library" name="antlr4-runtime-4.7.1" level="project" />
   </component>
 </module>

@@ -1,0 +1,20 @@
+<component name="libraryTable">
+  <library name="org.sat4j.core-src">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/Downloads/sat4j/NIGHTLY/org.sat4j.core.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/sat4j/NIGHTLY/org.sat4j.maxsat.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/sat4j/NIGHTLY/org.sat4j.pb.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/sat4j/NIGHTLY/org.sat4j.sat.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/sat4j/NIGHTLY/sat4j-maxsat.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/sat4j/NIGHTLY/sat4j-pb.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/sat4j/NIGHTLY/sat4j-sat.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/Downloads/sat4j/NIGHTLY/org.sat4j.core-src.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/sat4j/NIGHTLY/org.sat4j.maxsat-src.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/sat4j/NIGHTLY/org.sat4j.pb-src.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/sat4j/NIGHTLY/org.sat4j.sat-src.jar!/" />
+    </SOURCES>
+  </library>
+</component>
