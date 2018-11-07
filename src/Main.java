@@ -5,7 +5,14 @@ import org.logicng.io.parsers.ParserException;
 import org.logicng.io.parsers.PropositionalParser;
 import org.logicng.solvers.MiniSat;
 import org.logicng.solvers.SATSolver;
+import org.sat4j.core.VecInt;
+import org.sat4j.pb.SolverFactory;
+import org.sat4j.specs.ContradictionException;
+import org.sat4j.specs.IProblem;
+import org.sat4j.specs.ISolver;
+import org.sat4j.specs.TimeoutException;
 
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Main {
@@ -73,6 +80,8 @@ public class Main {
 
             int[] coords = agent.singlePointStrategy();
 
+
+
             System.out.println("Trying x = " +coords[1] +", y = " +coords[0]);
             uncoverCells(world, agent, coords);
             System.out.println();
@@ -98,7 +107,7 @@ public class Main {
         final PropositionalParser p = new PropositionalParser(f);
         try {
             final Formula formula = p.parse("(D22 & ~D23) | (~D22 & D23) & ((D22 & ~D23 & ~D24) | "
-                    +"(~D22 & D23 & ~D24) | (~D22 & ~D23 & D24)) & ((~D22 & ~D24) | (~D23 & D24)) & ~D23");
+                    +"(~D22 & D23 & ~D24) | (~D22 & ~D23 & D24)) & ((~D22 & ~D24) | (~D23 & D24)) & D23");
             final Formula cnf = formula.cnf();
             System.out.println(cnf.toString());
             final SATSolver miniSat = MiniSat.miniSat(f);
@@ -109,35 +118,40 @@ public class Main {
             e.printStackTrace();
         }
 
+        //(D23 | D22) & (D24 | D23 | D22) & (~D23 | ~D24 | D22) & (~D22 | ~D23) & (D24 | ~D22 | ~D23) & (~D22 | ~D24 | ~D23) & (~D24 | ~D23)
+        //D22 = 1, D23 = 2, D24 = 3
+        ArrayList<int[]> clauses = new ArrayList<>();
+        clauses.add(new int[] {2,1});
+        clauses.add(new int[] {3,2,1});
+        clauses.add(new int[] {-2,-3,1});
+        clauses.add(new int[] {-1,-2});
+        clauses.add(new int[] {3,-1,-2});
+        clauses.add(new int[] {-1,-3,-2});
+        clauses.add(new int[] {-3,-2});
+        clauses.add(new int[] {2});
 
-//        ArrayList<int[]> clauses = new ArrayList<>();
-//        clauses.add(new int[] {-22,22});
-//        clauses.add(new int[] {-22,-23});
-//        clauses.add(new int[] {23,22});
-//        clauses.add(new int[] {23,-23});
 
+        int MAXVAR = 3;
+        int NBCLAUSES = 8;
+        ISolver solver = SolverFactory.newDefault();
+        solver.newVar(MAXVAR);
+        solver.setExpectedNumberOfClauses(NBCLAUSES);
 
-
-
-//        int MAXVAR = 7;
-//        int NBCLAUSES = 3;
-//        ISolver solver = SolverFactory.newDefault();
-//        solver.newVar(MAXVAR);
-//        solver.setExpectedNumberOfClauses(NBCLAUSES);
-//
-//        for (int i = 0; i < NBCLAUSES; i++) {
-////            int[] clause =
-//            // get clauses here one by one
-////            solver.addClause(new VecInt(clause));
-//        }
-//
-//        IProblem problem= solver;
-//        if (problem.isSatisfiable()) {
-//
-//        }
-//        else {
-//
-//        }
-
+        try {
+            for (int i = 0; i < clauses.size(); i++) {
+                solver.addClause(new VecInt(clauses.get(i)));
+            }
+            IProblem problem= solver;
+            if (problem.isSatisfiable()) {
+                System.out.println("No fucking way this works, wow it worked");
+            }
+            else {
+                System.out.println("I knew it was too good to be true");
+            }
+        } catch (ContradictionException e) {
+            e.printStackTrace();
+        } catch (TimeoutException e) {
+            e.printStackTrace();
+        }
     }
 }
