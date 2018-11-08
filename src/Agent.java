@@ -5,10 +5,17 @@ import org.logicng.io.parsers.ParserException;
 import org.logicng.io.parsers.PropositionalParser;
 import org.logicng.solvers.MiniSat;
 import org.logicng.solvers.SATSolver;
+import org.sat4j.core.VecInt;
+import org.sat4j.pb.SolverFactory;
+import org.sat4j.specs.ContradictionException;
+import org.sat4j.specs.IProblem;
+import org.sat4j.specs.ISolver;
+import org.sat4j.specs.TimeoutException;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 public class Agent {
 
@@ -16,80 +23,48 @@ public class Agent {
     private int lives;
     private int cellsLeft;
 
-    private boolean tryMarking(int x, int y) {
-        boolean marked = false;
-        int clueCnt = Integer.parseInt(displMap[y][x]); // gets number of adjacent daggers
+
+    /*********************************  SINGLE POINT STRATEGY *********************************/
+
+    /**
+     *
+     * @param x
+     * @param y
+     * @return
+     */
+    public int[] markNFree(int x, int y, int clueCnt) {
+        int[] coords = new int[2];
         int daggers = 0; // number of daggers marked or stabbed by
-        int unmarkedCount = 0; // gets number of unmarked positions
         int[] stspCoords = getStartStopCoords(x, y);
-        for (int k = stspCoords[0]; k <= stspCoords[1]; k++) {
-            for (int l = stspCoords[2]; l <= stspCoords[3]; l++) {
+        ArrayList<int[]> covCells = new ArrayList<>();
+        for (int k = stspCoords[2]; k <= stspCoords[3]; k++) {
+            for (int l = stspCoords[0]; l <= stspCoords[1]; l++) {
                 if (displMap[k][l] == "+") {
-                    unmarkedCount++;
+                    covCells.add(new int[] {l, k}); // x, y
                 }
                 if (displMap[k][l] == "d" || displMap[k][l] == "D") {
                     daggers++;
                 }
             }
         }
-        if (unmarkedCount == clueCnt - daggers) {
-            marked = true;
-            for (int k = stspCoords[0]; k <= stspCoords[1]; k++) {
-                for (int l = stspCoords[2]; l <= stspCoords[3]; l++) {
-                    if (displMap[k][l] == "+") {
-                        displMap[k][l] = "D";
-                    }
-                }
-            }
-            System.out.println("*************");
-            printWorld();
-            System.out.println("*************");
-        }
-        return marked;
-    }
-
-    private boolean findMarkedNeighbors(int x, int y) {
-        boolean found = false;
-        int[] stspCoords = getStartStopCoords(x, y);
-        for (int k = stspCoords[0]; k <= stspCoords[1]; k++) {
-            for (int l = stspCoords[2]; l <= stspCoords[3]; l++) {
-                if (displMap[k][l] != "D" && displMap[k][l] != "d" && displMap[k][l] != "g" && displMap[k][l] != "+") { // if a number
-//                    System.out.println("trying to mark " +displMap[k][l] +" at " +l +"," +k);
-                    tryMarking(l, k);
-                }
+        // if the number of adjacent unmarked cells equal the number in the original cell
+        // minus uncovered or covered daggers, tag those cells as daggers, ALL MARKED NEIGHBORS part
+        if (covCells.size() == clueCnt - daggers) {
+            for (int ay = 0; ay < covCells.size(); ay++) {
+                System.out.println("Marking dagger at " +covCells.get(ay)[0]+","+covCells.get(ay)[1]);
+                displMap[covCells.get(ay)[1]][covCells.get(ay)[0]] = "D";
             }
         }
-        return found;
-    }
-
-    private boolean allFree(int x, int y) {
-        boolean allFree = false;
-        int count = 0;
-        int[] stspCoords = getStartStopCoords(x, y);
-        for (int k = stspCoords[0]; k <= stspCoords[1]; k++) {
-            for (int l = stspCoords[2]; l <= stspCoords[3]; l++) {
-//                System.out.println("looking at "+displMap[k][l] +" at "+l +","+k);
-                if (displMap[k][l] == "+") {
-                    count++;
-                }
-            }
+        // if number of adjacent daggers - number specified in original cell == 0,
+        // the last covered cell must be ok to probe! ALL FREE NEIGHBORS part
+        if (daggers - clueCnt == 0 && covCells.size() > 0) {
+            coords = covCells.get(0);
         }
-        if (count == 1)
-            allFree = true;
-        return allFree;
+        return coords;
     }
 
 
-
-
-
-
-
-
-
-
-
-
+    /********************************* SAT STRATEGY **************************************/
 
     //code modified from https://ide.geeksforgeeks.org/index.php
     //given an arraylist of vells containing pluses:
@@ -104,21 +79,14 @@ public class Agent {
                         chosenOne = true;
                 }
                 if (!chosenOne) {
-//                    System.out.print("~");
                     clause += "~";
                 }
-                clause += "D"+arr[j][0]+arr[j][1]+" ";
-//                System.out.print("D"+arr[j][0]+arr[j][1]+" ");
+                clause += "D"+arr[j][0]+arr[j][1];
                 if (j != arr.length - 1) {
-//                    System.out.print("& ");
-                    clause += "& ";
+                    clause += " & ";
                 }
             }
-//            System.out.println("|");
-//            clause += "| ";
-//            for (int j=0; j<r; j++)
-//                System.out.print("["+data[j][1]+","+data[j][0]+"] ");
-//            System.out.println();
+            clause = "(" +clause +")";
             clauses.add(clause);
             return clauses;
         }
@@ -138,23 +106,17 @@ public class Agent {
         return clauses;
     }
 
-
-
     private String makeRules(int x, int y, int adjDags) {
         int[] stspCoords = getStartStopCoords(x, y);
         String rule = "";
         ArrayList<int[]> covCells = new ArrayList<>(); // x, y adjacent covered cell locations
         ArrayList<int[]> dagCells = new ArrayList<>(); // x, y known adjacent dagger cell locations
-        int flagNStabDags = 0; //number of flagged daggers and dagger stabbed by already aka "D" and "d"
-//        int coveredCells = 0;
-        for (int a = stspCoords[0]; a <= stspCoords[1]; a++) {
-            for (int b = stspCoords[2]; b <= stspCoords[3]; b++) {
+        for (int a = stspCoords[2]; a <= stspCoords[3]; a++) {
+            for (int b = stspCoords[0]; b <= stspCoords[1]; b++) {
                 if (displMap[a][b] == "+") {
                     covCells.add(new int[] {b, a});
-//                    coveredCells++;
                 }
                 if (displMap[a][b] == "d" && displMap[a][b] == "D") {
-                    flagNStabDags++;
                     dagCells.add(new int[] {b, a});
                 }
             }
@@ -162,17 +124,13 @@ public class Agent {
         // if number of daggers adjacent to number cell is less than the number of flagged
         // daggers and uncovered daggers, there are still daggers to uncover out there!
         // LET'S DO SOME PROPOSITIONAL LOGIC!!!
-        if (adjDags > flagNStabDags) {
-            int dagsLeft = adjDags - flagNStabDags;
+        if (adjDags > dagCells.size()) {
+            int dagsLeft = adjDags - dagCells.size();
 
             // get all the possible or clauses for the pluses
             ArrayList<String> clauses = new ArrayList<>();
             int[][] covCellsArr = covCells.toArray(new int[covCells.size()][2]);
-//            System.out.print("covCells from [" +x +"," +y +"]: ");
-//            for (int t = 0; t < covCellsArr.length; t++) {
-//                System.out.print("[" +covCellsArr[t][1] +"," +covCellsArr[t][0] +"]");
-//            }
-            System.out.println();
+
             int[][] possibleCombos = new int[covCells.size()][2];
             clauses = shitGold(covCellsArr, covCells.size(), dagsLeft, 0, possibleCombos, 0, clauses);
             for (int oh = 0; oh < clauses.size(); oh++) {
@@ -180,94 +138,176 @@ public class Agent {
                 rule += clauses.get(oh);
                 if (oh != clauses.size() - 1) {
 //                    System.out.print("| ");
-                    rule += "| ";
+                    rule += " | ";
                 }
             }
 //            System.out.println(rule);
             // then add the definite daggers to the mix
+            for (int oh = 0; oh < dagCells.size(); oh++) {
+                rule += "& " +dagCells.get(oh);
+            }
         }
+        System.out.println("Rule for " +x+","+y +": " +rule);
         return rule;
     }
 
-    private boolean satisfiedHere(int x, int y) { // find clues surrounding covered cell
-        boolean satisfied = false;
+    private IProblem makeDIMACS(String rules) {
+        final FormulaFactory f = new FormulaFactory();
+        final PropositionalParser p = new PropositionalParser(f);
+        ISolver solver = SolverFactory.newDefault();
+        try {
+            final Formula formula = p.parse(rules);
+            final Formula cnf = formula.cnf();
+//            System.out.println(cnf.toString());
+
+            int numClauses = 1;
+            ArrayList<String> variables = new ArrayList<>();
+            String cnfStr = cnf.toString();
+
+            for (int go = 0; go < cnfStr.length(); go++) {
+                if (cnfStr.charAt(go) == '&')
+                    numClauses++;
+            }
+
+            String cnfCleaned = cnfStr.replace("(", "");
+            cnfCleaned = cnfCleaned.replace(")", "");
+            cnfCleaned = cnfCleaned.replace(" ", "");
+            cnfCleaned = cnfCleaned.replace("D", "");
+            cnfCleaned = cnfCleaned.replace("~", "-");
+//            System.out.println("cnfCleaned = " +cnfCleaned);
+            String[] clauses = cnfCleaned.split("&");
+
+            solver.newVar(25); // max total number of cells there could be rules for a given cell
+            solver.setExpectedNumberOfClauses(clauses.length + 2);
+            for (int ay = 0; ay < clauses.length; ay++) {
+                String[] clauseSpl = clauses[ay].split(Pattern.quote("|"));
+//                System.out.println("ClauseSPL: " +Arrays.toString(clauseSpl));
+                int[] clause = new int[clauseSpl.length];
+                for (int uh = 0; uh < clause.length; uh++) {
+//                    System.out.println(clauseSpl[uh]);
+                    clause[uh] = Integer.parseInt(clauseSpl[uh]);
+                }
+//                System.out.print(Arrays.toString(clause) +" ");
+                solver.addClause(new VecInt(clause));
+            }
+//            solver.addClause(new VecInt(new int[] {Integer.parseInt(curr)}));
+//            System.out.println(curr);
+        } catch (ParserException e) {
+//            System.out.println("Couldnt parse this formula: " +rules);
+        } catch (ContradictionException e) {
+//            e.printStackTrace();
+        } catch (NumberFormatException e) {
+//            System.out.println("Error in LogicNG cnf conversion");
+        }
+        IProblem problem = solver;
+        return problem;
+    }
+
+    public boolean satisfiedHere(int x, int y, String rules) { // find clues surrounding covered cell
+        boolean satisfied = true;
+
+        rules = "(" +rules +")";
+
+        String rules4Danger = rules + "& ~D" +x +y;
+//        String currentPos = "-" +Integer.toString(x) +Integer.toString(y);
+//        System.out.println("Rules4D:    " +rules4Danger);
+
+
+//        System.out.print("Danger Here? ");
+        IProblem dangerHere = makeDIMACS(rules4Danger);
+
+        try {
+//            System.out.println("KBU & ~D"+x+y +" = " +dangerHere.isSatisfiable());
+            if (!dangerHere.isSatisfiable()) {
+                displMap[y][x] = "D";
+            }
+        } catch (TimeoutException e) {
+            e.printStackTrace();
+        }
+
+        String rules4Safety = rules +"& D" +x +y;
+//        System.out.println("Rules4S:    " +rules4Safety);
+
+//        System.out.print("Cell Clear? ");
+        IProblem safeHere = makeDIMACS(rules4Safety);
+
+        try {
+//            System.out.println("KBU & D"+x+y +" = " +safeHere.isSatisfiable());
+            if (!safeHere.isSatisfiable()) {
+                satisfied = false;
+            }
+        } catch (TimeoutException e) {
+            e.printStackTrace();
+        }
+//        System.out.println();
+        return satisfied;
+    }
+
+    public String getRules(int x, int y) {
+        boolean satisfied = true;
         String rules = "";
         int[] stspCoords = getStartStopCoords(x, y);
-        for (int k = stspCoords[0]; k <= stspCoords[1]; k++) {
-            for (int l = stspCoords[2]; l <= stspCoords[3]; l++) {
+        for (int k = stspCoords[2]; k <= stspCoords[3]; k++) {
+            for (int l = stspCoords[0]; l <= stspCoords[1]; l++) {
                 try {
                     int numAdjDags = Integer.parseInt(displMap[k][l]);
+//                    System.out.println(l+","+k +" has " +numAdjDags +" daggers");
                     if (numAdjDags > 0) {
-                        rules += makeRules(l,k, numAdjDags);
-                        if (k != stspCoords[1] && l != stspCoords[3])
-                            rules += "| ";
+                        rules += makeRules(l,k, numAdjDags) +"| ";
                     }
                 } catch(Exception e) {
 
                 }
             }
         }
-
-        rules += "& ~D" +x +y;
-        System.out.println(rules);
-
-        final FormulaFactory f = new FormulaFactory();
-        final PropositionalParser p = new PropositionalParser(f);
-        try {
-            final Formula formula = p.parse("(D22 & ~D23) | (~D22 & D23) & ((D22 & ~D23 & ~D24) | "
-                    +"(~D22 & D23 & ~D24) | (~D22 & ~D23 & D24)) & ((~D22 & ~D24) | (~D23 & D24)) & D23");
-            final Formula cnf = formula.cnf();
-            System.out.println(cnf.toString());
-//            final SATSolver miniSat = MiniSat.miniSat(f);
-//            miniSat.add(formula);
-//            final Tristate result = miniSat.sat();
-//            System.out.println(result);
-        } catch (ParserException e) {
-            e.printStackTrace();
+        if (rules.length() > 0) {
+            rules = rules.substring(0, rules.length() - 2); // removes last "| ";
         }
-
-        return satisfied;
-    }
-
-    private int[] findATS() { // finds uncovered cell and calls satisfiedHere at that cell
-        int[] coords = new int[2];
-        for (int i = 0; i < displMap.length; i++) {
-            for (int j = 0; j < displMap.length; j++) {
-                if (displMap[i][j] == "+") {
-                    System.out.println("making rules for cells adjacent to [" +j+","+i+"]: ");
-                    if (satisfiedHere(j,i)) {
-                        coords = new int[]{j, i};
-                        break;
-                    }
-                }
-            }
-        }
-        return coords;
+        return rules;
     }
 
     public int[] singlePointStrategy() {
         int[] coords = new int[2];
         boolean sPFound = false;
 
-//        for (int i = 0; i < displMap.length; i++) {
-//            for (int j = 0; j < displMap.length; j++) {
-//                if (displMap[i][j] == "+") {
-//                    findMarkedNeighbors(j, i);
-//                    if (allFree(j, i)) { // consider doing this after finding all marked neighbors
-//                        coords[0] = i;
-//                        coords[1] = j;
-//                        sPFound = true;
-//                        break;
-//                    }
-//                }
-//            }
-//        }
-//        boolean aTSFound = false;
+        for (int y = 0; y < displMap.length; y++) {
+            for (int x = 0; x < displMap.length; x++) {
+                try {
+                    int numCell = Integer.parseInt(displMap[y][x]);
+                    if (numCell > 0) {
+                        coords = markNFree(x, y, numCell);
+                        if (coords[1] != 0 && coords[0] != 0) {
+                            System.out.println("SPS found");
+                            return coords;
+//                            sPFound = true;
+//                            break;
+                        }
+                    }
+                } catch (Exception e) {}
+            }
+        }
+        boolean aTSFound = false;
 //        if (!sPFound) {
-            coords = findATS();
+            for (int y = 0; y < displMap.length; y++) {
+                for (int x = 0; x < displMap.length; x++) {
+                    if (displMap[y][x] == "+") {
+                        String rulesRoundHere = getRules(x, y);
+
+                        if (!satisfiedHere(x,y, rulesRoundHere)) { // x, y
+                            coords = new int[]{x, y};
+                            return coords;
+//                            aTSFound = true;
+//                            System.out.println("ATS found");
+//                            break;
+                        }
+                    }
+                }
+            }
 //        }
-//        if (!aTSFound)
-//            coords = randomProbingStrategy();
+//        if (!aTSFound && !sPFound) {
+            System.out.println("Rand found");
+            coords = randomProbingStrategy();
+//        }
         return coords;
     }
 
@@ -277,22 +317,24 @@ public class Agent {
         while (!coordsAreGood) {
             coords[0] = (int) (Math.random() * displMap.length);
             coords[1] = (int) (Math.random() * displMap.length);
-            if (displMap[coords[0]][coords[1]] == "+")
+            if (displMap[coords[1]][coords[0]] == "+")
                 coordsAreGood = true;
         }
         return coords;
     }
 
     public  int[] getStartStopCoords(int x, int y) {
-        int[] stspCoords = new int[4]; // [startY, endY, startX, endX]
-        stspCoords[0] = y - 1;
-        stspCoords[1] = y + 1;
+        int[] stspCoords = new int[4]; // [startX, endX, startY, endY]
+
+        stspCoords[0] = x - 1;
+        stspCoords[1] = x + 1;
         if (stspCoords[0] < 0)
             stspCoords[0] = 0;
         if (stspCoords[1] >= displMap.length)
             stspCoords[1] = displMap.length - 1;
-        stspCoords[2] = x - 1;
-        stspCoords[3] = x + 1;
+
+        stspCoords[2] = y - 1;
+        stspCoords[3] = y + 1;
         if (stspCoords[2] < 0)
             stspCoords[2] = 0;
         if (stspCoords[3] >= displMap.length)
@@ -300,21 +342,21 @@ public class Agent {
         return stspCoords;
     }
 
-    public void adjustMap(int[] coords, String val) {
-        if (displMap[coords[0]][coords[1]] == "+") { // if move on new position
+    public void adjustMap(int[] coords, String val) { // x,y
+        if (displMap[coords[1]][coords[0]] == "+") { // if move on new position
             if (val == "g")
                 lives++;
             else if (val == "d") {
                 lives--;
                 cellsLeft++; // more elegant solution later, but basically doesn't remove cell from cell left if on dagger
             }
-            displMap[coords[0]][coords[1]] = val;
+            displMap[coords[1]][coords[0]] = val;
             cellsLeft--;
         }
     }
 
     public String getCell(int[] coords) {
-        return displMap[coords[0]][coords[1]];
+        return displMap[coords[1]][coords[0]];
     }
 
     public void adjustLives(int val) { // val here is value of change (-1 to remove life or 1 to add)
@@ -330,6 +372,7 @@ public class Agent {
     }
 
     public void printWorld() {
+        System.out.println();
         System.out.print("   ");
         for (int a = 0; a < displMap.length; a++) {
             System.out.print(" " +a);
