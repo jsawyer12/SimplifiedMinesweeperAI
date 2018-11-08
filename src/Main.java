@@ -18,6 +18,12 @@ import java.util.Scanner;
 
 public class Main {
 
+    /**
+     * probes cell and uncovers cell and adjacent cells if cell = "0"
+     * @param world
+     * @param agent
+     * @param coords
+     */
     public static void probeCell(World world, Agent agent, int[] coords) { // x, y
         if (world.map[coords[1]][coords[0]] == "0") {
             int[] stspCoords = agent.getStartStopCoords(coords[0], coords[1]); // get top left and bottom left cell coords for search
@@ -37,6 +43,11 @@ public class Main {
             agent.adjustMap(coords, world.map[coords[1]][coords[0]]);
     }
 
+    /**
+     * parses user input to get coordinates
+     * @param in
+     * @return
+     */
     public static int[] getCoords(String in) { // parses string to get x, y
         int[] coords = new int[2];
         try {
@@ -69,6 +80,12 @@ public class Main {
         return gameOver;
     }
 
+    /**
+     * game loop
+     * @param world
+     * @param agent
+     * @return
+     */
     public static boolean playGame(World world, Agent agent) {
         Scanner userIn = new Scanner(System.in);
         probeCell(world, agent, new int[]{0, 0});
@@ -101,34 +118,34 @@ public class Main {
 
         ArrayList<World> worlds = setUpWorldArray();
 
-//        int userInWorldChoice = 0;
-//        try {
-//            userInWorldChoice = Integer.parseInt(args[0]);
-//        } catch (Exception e) {
-//            System.out.println("Incorrect input for world choice (input between 0-29), using EASY1");
-//        }
-//
-//        World world = worlds.get(userInWorldChoice);
-//
-//        Agent stupidAgent = new Agent(world.length);
-//
-//        playGame(world, stupidAgent);
+        int userInWorldChoice = 0;
+        try {
+            userInWorldChoice = Integer.parseInt(args[0]);
+        } catch (Exception e) {
+            System.out.println("Incorrect input for world choice (input between 0-29), using EASY1");
+        }
 
-//        System.out.println("SPS Used = " +stupidAgent.spsUse +", Rand Used = " +stupidAgent.randUse);
+        World world = worlds.get(userInWorldChoice);
+
+        Agent stupidAgent = new Agent(world.length);
+
+        playGame(world, stupidAgent);
+
+        System.out.println("SPS Used = " +stupidAgent.spsUse +", Rand Used = " +stupidAgent.randUse);
 
         /******************* STATISTICAL USE *******************/
 
-        for (int k = 0; k < worlds.size(); k++) {
-            World worldTest = worlds.get(k);
-            int won = 0;
-            for (int i = 0; i < 100; i++) {
-                Agent agentTest = new Agent(worldTest.length);
-                if (playGame(worldTest,agentTest))
-                    won++;
-            }
-            System.out.println("World" +k +": won " +won +" out of 100");
-
-        }
+//        for (int k = 0; k < worlds.size(); k++) {
+//            World worldTest = worlds.get(k);
+//            int won = 0;
+//            for (int i = 0; i < 100; i++) {
+//                Agent agentTest = new Agent(worldTest.length);
+//                if (playGame(worldTest,agentTest))
+//                    won++;
+//            }
+//            System.out.println("World" +k +": won " +won +" out of 100");
+//
+//        }
 
         /******************* TESTING USE *******************/
 
@@ -204,6 +221,10 @@ public class Main {
 //        }
     }
 
+    /**
+     * for jar args to decide world
+     * @return
+     */
     public static ArrayList<World> setUpWorldArray() {
         ArrayList<World> worlds = new ArrayList<>();
         World world1 = World.EASY1;

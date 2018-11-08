@@ -26,6 +26,9 @@ public class Agent {
     /*********************************  SINGLE POINT STRATEGY *********************************/
 
 
+    /**
+     * Marks daggers only when they are guaranteed to be in the given cell
+     */
     public void markDaggers() {
         for (int y = 0; y < displMap.length; y++) {
             for (int x = 0; x < displMap.length; x++) {
@@ -60,7 +63,7 @@ public class Agent {
     }
 
     /**
-     *
+     * returns coordinates of a guaranteed free space
      * @return
      */
     public int[] freeCells() {
@@ -138,6 +141,13 @@ public class Agent {
         return clauses;
     }
 
+    /**
+     * makes a rule for an individual clue cell adjacent to dagger cell[s]
+     * @param x
+     * @param y
+     * @param clueCnt
+     * @return
+     */
     private String makeRule(int x, int y, int clueCnt) {
         System.out.print("Rule for " +x+","+y +": ");
         int[] stspCoords = getStartStopCoords(x, y);
@@ -159,46 +169,41 @@ public class Agent {
         // LET'S DO SOME PROPOSITIONAL LOGIC!!!
         if (clueCnt > dagCells.size()) {
             int dagsLeft = clueCnt - dagCells.size();
-
             // get all the possible or clauses for the pluses
             ArrayList<String> clauses = new ArrayList<>();
             int[][] covCellsArr = covCells.toArray(new int[covCells.size()][2]);
-
             int[][] possibleCombos = new int[covCells.size()][2];
-//            for (int oh = 0; oh < dagCells.size(); oh++) {
-//                possibleCombos[oh][0] = dagCells.get(oh)[0];
-//                possibleCombos[oh][1] = dagCells.get(oh)[1];
-//            }
             clauses = clausePossibilities(covCellsArr, covCells.size(), dagsLeft, 0, possibleCombos, 0, clauses);
             for (int oh = 0; oh < clauses.size(); oh++) {
-//                System.out.print(clauses.get(oh) +" ");
                 rule += clauses.get(oh);
                 if (oh != clauses.size() - 1) {
-//                    System.out.print("| ");
                     rule += " | ";
                 }
             }
-//            System.out.println(rule);
-            // then add the definite daggers to the mix, dont think I need this since not included in clauses anyway
-//            for (int oh = 0; oh < dagCells.size(); oh++) {
-//                rule += "& " +dagCells.get(oh);
-//            }
         }
         System.out.println(rule);
         return rule;
     }
 
+    /**
+     * Removes and modifies characters in the rules to be turned into DIMACS
+     * @param cnfStr
+     * @return
+     */
     private String[] cnfFilleted(String cnfStr) {
-//        System.out.println("Before cleaning" +cnfStr);
         String cnfCleaned = cnfStr.replace("(", "");
         cnfCleaned = cnfCleaned.replace(")", "");
         cnfCleaned = cnfCleaned.replace(" ", "");
         cnfCleaned = cnfCleaned.replace("D", "");
         cnfCleaned = cnfCleaned.replace("~", "-");
-//        System.out.println("cnfCleaned = " +cnfCleaned);
         return cnfCleaned.split("&");
     }
 
+    /**
+     * takes cnf string and turns it into DIMACS
+     * @param cnfStr
+     * @return
+     */
     public ISolver makeDIMACS(String cnfStr) {
         ISolver solver = SolverFactory.newDefault();
         try {
@@ -229,6 +234,11 @@ public class Agent {
         return solver;
     }
 
+    /**
+     * checks to see if problem is satisfiable
+     * @param rules
+     * @return
+     */
     public boolean satisfiedHere(IProblem rules) { // find clues surrounding covered cell
         boolean satisfied = true;
         try {
@@ -241,6 +251,12 @@ public class Agent {
         return satisfied;
     }
 
+    /**
+     * gets all the rules for a given covered cell location
+     * @param x
+     * @param y
+     * @return
+     */
     public String getRules(int x, int y) {
         String rules = "";
         int[] stspCoords = getStartStopCoords(x, y);
@@ -263,6 +279,11 @@ public class Agent {
         return rules;
     }
 
+    /**
+     * converts rules string into CNF using logicNG library
+     * @param rules
+     * @return
+     */
     public String makeCNF(String rules) {
         String cnfStr = "";
         final FormulaFactory f = new FormulaFactory();
@@ -271,8 +292,6 @@ public class Agent {
         try {
             final Formula formula = p.parse(rules);
             final Formula cnf = formula.cnf();
-//            System.out.println(cnf.toString());
-
             int numClauses = 1;
             ArrayList<String> variables = new ArrayList<>();
             cnfStr = cnf.toString();
@@ -282,6 +301,10 @@ public class Agent {
         return cnfStr;
     }
 
+    /**
+     * runs full ATS method to return coordinates of a move
+     * @return
+     */
     private int[] runATS() {
         int[] coords = new int[2];
         for (int y = 0; y < displMap.length; y++) {
@@ -315,6 +338,10 @@ public class Agent {
         return coords;
     }
 
+    /**
+     * single point strategy implementation
+     * @return
+     */
     public int[] singlePointStrategy() {
         int[] coords = new int[2];
         markDaggers();
@@ -330,8 +357,12 @@ public class Agent {
         return coords;
     }
 
+    /**
+     * SAT implementation
+     * @return
+     */
     public int[] satisfiabilityTestStrategy() {
-        int[] coords = new int[2];
+        int[] coords;
 
         markDaggers();
 
@@ -353,6 +384,10 @@ public class Agent {
         return coords;
     }
 
+    /**
+     * RPS implementation
+     * @return
+     */
     public int[] randomProbingStrategy() {
         int[] coords = new int[2];
         boolean coordsAreGood = false;
@@ -391,6 +426,11 @@ public class Agent {
         return stspCoords;
     }
 
+    /**
+     * takes coordinates and value from map and adds to display and agent knowledge base
+     * @param coords
+     * @param val
+     */
     public void adjustMap(int[] coords, String val) { // x,y
         if (displMap[coords[1]][coords[0]] == "+") { // if move on new position
             if (val == "g")
@@ -441,12 +481,12 @@ public class Agent {
     }
 
     // for statistical analysis
-//    public int spsUse;
-//    public int randUse;
+    public int spsUse;
+    public int randUse;
 
     public Agent (int mapLength) {
-//        spsUse = 0;
-//        randUse = 0;
+        spsUse = 0;
+        randUse = 0;
 
         this.displMap =  new String[mapLength][mapLength];
         for (int i = 0; i < mapLength; i++) {
