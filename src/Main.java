@@ -92,16 +92,17 @@ public class Main {
 
     public static void main(String[] args) {
 
-        World world = World.HARD1;
+        World world = World.HARD2;
 
         Agent stupidAgent = new Agent(world.length);
-
 
         playGame(world, stupidAgent);
 
 //        uncoverCells(world, stupidAgent, new int[] {0, 0});
 //        uncoverCells(world, stupidAgent, new int[] {2, 2});
-//        stupidAgent.printWorld();
+//        uncoverCells(world, stupidAgent, new int[] {2, 4});
+
+        stupidAgent.printWorld();
 //        int[] coords = stupidAgent.markNFree(1,2,1);
 //        System.out.println(Arrays.toString(coords));
 //        stupidAgent.printWorld();
@@ -113,19 +114,43 @@ public class Main {
 //        System.out.println("Top practice = " +stupidAgent.satisfiedHere(2,3));
 //
 //
+//        String rules = stupidAgent.getRules(2,3);
+//        rules = "((D20 & ~D21 & ~D22) | (~D20 & D21 & ~D22) | (~D20 & ~D21 & D22) & " +
+//                "(D20 & ~D21) | (~D20 & D21) & (D21 & ~D22) | (~D21 & D22)) & D21 ";
+//        rules += " & (D23)";
+//        System.out.println("Rules: " +rules);
+//        String cnf = stupidAgent.makeCNF(rules);
+//        System.out.println("CNF: " +cnf);
+//        ISolver solver = stupidAgent.makeDIMACS(cnf);
+//        try {
+//            solver.addClause(new VecInt(new int[] {22,24}));
+//            solver.addClause(new VecInt(new int[] {-23}));
+//        } catch (ContradictionException e) {
+//            e.printStackTrace();
+//        }
+
 //        final int MAXVAR = 7; //max number of variables
 //        final int NBCLAUSES = 3; // number of clauses
 //        ISolver solver = SolverFactory.newDefault();
 //        solver.newVar(MAXVAR);
 //        solver.setExpectedNumberOfClauses(NBCLAUSES);
 //
+//        // 1 = 20, 2 = 21, 3 = 22
 //        int[] clause1=new int[] {3, 2, 1};
-//        int[] clause2=new int[] {-3, -1, -2};
-//        int[] clause3=new int[] {-2};
+//        int[] clause2=new int[] {-2, -3, 1};
+//        int[] clause3=new int[] {-1, -2};
+//        int[] clause4=new int[] {3, -1, -2};
+//        int[] clause5=new int[] {-2, -3};
+//        int[] clause6=new int[] {-2, -3, -1};
+//        int[] clause7=new int[] {-2};
 //        try {
 //            solver.addClause(new VecInt(clause1));
 //            solver.addClause(new VecInt(clause2));
 //            solver.addClause(new VecInt(clause3));
+//            solver.addClause(new VecInt(clause4));
+//            solver.addClause(new VecInt(clause5));
+//            solver.addClause(new VecInt(clause6));
+//            solver.addClause(new VecInt(clause7));
 //        } catch (ContradictionException e) {
 //            e.printStackTrace();
 //        }

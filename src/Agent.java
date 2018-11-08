@@ -106,7 +106,8 @@ public class Agent {
         return clauses;
     }
 
-    private String makeRules(int x, int y, int adjDags) {
+    private String makeRules(int x, int y, int clueCnt) {
+        System.out.print("Rule for " +x+","+y +": ");
         int[] stspCoords = getStartStopCoords(x, y);
         String rule = "";
         ArrayList<int[]> covCells = new ArrayList<>(); // x, y adjacent covered cell locations
@@ -124,8 +125,8 @@ public class Agent {
         // if number of daggers adjacent to number cell is less than the number of flagged
         // daggers and uncovered daggers, there are still daggers to uncover out there!
         // LET'S DO SOME PROPOSITIONAL LOGIC!!!
-        if (adjDags > dagCells.size()) {
-            int dagsLeft = adjDags - dagCells.size();
+        if (clueCnt > dagCells.size()) {
+            int dagsLeft = clueCnt - dagCells.size();
 
             // get all the possible or clauses for the pluses
             ArrayList<String> clauses = new ArrayList<>();
@@ -147,35 +148,31 @@ public class Agent {
                 rule += "& " +dagCells.get(oh);
             }
         }
-        System.out.println("Rule for " +x+","+y +": " +rule);
+        System.out.println(rule);
         return rule;
     }
 
-    private IProblem makeDIMACS(String rules) {
-        final FormulaFactory f = new FormulaFactory();
-        final PropositionalParser p = new PropositionalParser(f);
+    private String[] cnfFilleted(String cnfStr) {
+        int numClauses = 1;
+        for (int go = 0; go < cnfStr.length(); go++) {
+            if (cnfStr.charAt(go) == '&')
+                numClauses++;
+        }
+
+        String cnfCleaned = cnfStr.replace("(", "");
+        cnfCleaned = cnfCleaned.replace(")", "");
+        cnfCleaned = cnfCleaned.replace(" ", "");
+        cnfCleaned = cnfCleaned.replace("D", "");
+        cnfCleaned = cnfCleaned.replace("~", "-");
+        System.out.println("cnfCleaned = " +cnfCleaned);
+        return cnfCleaned.split("&");
+    }
+
+    public ISolver makeDIMACS(String cnfStr) {
         ISolver solver = SolverFactory.newDefault();
         try {
-            final Formula formula = p.parse(rules);
-            final Formula cnf = formula.cnf();
-//            System.out.println(cnf.toString());
 
-            int numClauses = 1;
-            ArrayList<String> variables = new ArrayList<>();
-            String cnfStr = cnf.toString();
-
-            for (int go = 0; go < cnfStr.length(); go++) {
-                if (cnfStr.charAt(go) == '&')
-                    numClauses++;
-            }
-
-            String cnfCleaned = cnfStr.replace("(", "");
-            cnfCleaned = cnfCleaned.replace(")", "");
-            cnfCleaned = cnfCleaned.replace(" ", "");
-            cnfCleaned = cnfCleaned.replace("D", "");
-            cnfCleaned = cnfCleaned.replace("~", "-");
-//            System.out.println("cnfCleaned = " +cnfCleaned);
-            String[] clauses = cnfCleaned.split("&");
+            String[] clauses = cnfFilleted(cnfStr);
 
             solver.newVar(25); // max total number of cells there could be rules for a given cell
             solver.setExpectedNumberOfClauses(clauses.length + 2);
@@ -187,58 +184,42 @@ public class Agent {
 //                    System.out.println(clauseSpl[uh]);
                     clause[uh] = Integer.parseInt(clauseSpl[uh]);
                 }
-//                System.out.print(Arrays.toString(clause) +" ");
+                System.out.print(Arrays.toString(clause) +" ");
                 solver.addClause(new VecInt(clause));
             }
 //            solver.addClause(new VecInt(new int[] {Integer.parseInt(curr)}));
 //            System.out.println(curr);
-        } catch (ParserException e) {
-//            System.out.println("Couldnt parse this formula: " +rules);
         } catch (ContradictionException e) {
 //            e.printStackTrace();
         } catch (NumberFormatException e) {
 //            System.out.println("Error in LogicNG cnf conversion");
         }
-        IProblem problem = solver;
-        return problem;
+        return solver;
     }
 
-    public boolean satisfiedHere(int x, int y, String rules) { // find clues surrounding covered cell
+    public boolean satisfiedHere(int x, int y, IProblem rules) { // find clues surrounding covered cell
         boolean satisfied = true;
 
-        rules = "(" +rules +")";
 
-        String rules4Danger = rules + "& ~D" +x +y;
-//        String currentPos = "-" +Integer.toString(x) +Integer.toString(y);
-//        System.out.println("Rules4D:    " +rules4Danger);
-
-
-//        System.out.print("Danger Here? ");
-        IProblem dangerHere = makeDIMACS(rules4Danger);
-
-        try {
-//            System.out.println("KBU & ~D"+x+y +" = " +dangerHere.isSatisfiable());
-            if (!dangerHere.isSatisfiable()) {
-                displMap[y][x] = "D";
-            }
-        } catch (TimeoutException e) {
-            e.printStackTrace();
-        }
-
-        String rules4Safety = rules +"& D" +x +y;
-//        System.out.println("Rules4S:    " +rules4Safety);
-
-//        System.out.print("Cell Clear? ");
-        IProblem safeHere = makeDIMACS(rules4Safety);
-
-        try {
-//            System.out.println("KBU & D"+x+y +" = " +safeHere.isSatisfiable());
-            if (!safeHere.isSatisfiable()) {
-                satisfied = false;
-            }
-        } catch (TimeoutException e) {
-            e.printStackTrace();
-        }
+//        try {
+////            System.out.println("KBU & ~D"+x+y +" = " +dangerHere.isSatisfiable());
+//            if (!rules.isSatisfiable()) {
+//                displMap[y][x] = "D";
+//            }
+//        } catch (TimeoutException e) {
+//            e.printStackTrace();
+//        }
+//
+//
+//
+//        try {
+////            System.out.println("KBU & D"+x+y +" = " +safeHere.isSatisfiable());
+//            if (!rules.isSatisfiable()) {
+//                satisfied = false;
+//            }
+//        } catch (TimeoutException e) {
+//            e.printStackTrace();
+//        }
 //        System.out.println();
         return satisfied;
     }
@@ -253,7 +234,7 @@ public class Agent {
                     int numAdjDags = Integer.parseInt(displMap[k][l]);
 //                    System.out.println(l+","+k +" has " +numAdjDags +" daggers");
                     if (numAdjDags > 0) {
-                        rules += makeRules(l,k, numAdjDags) +"| ";
+                        rules += makeRules(l,k, numAdjDags) +" | ";
                     }
                 } catch(Exception e) {
 
@@ -264,6 +245,25 @@ public class Agent {
             rules = rules.substring(0, rules.length() - 2); // removes last "| ";
         }
         return rules;
+    }
+
+    public String makeCNF(String rules) {
+        String cnfStr = "";
+        final FormulaFactory f = new FormulaFactory();
+        final PropositionalParser p = new PropositionalParser(f);
+        ISolver solver = SolverFactory.newDefault();
+        try {
+            final Formula formula = p.parse(rules);
+            final Formula cnf = formula.cnf();
+//            System.out.println(cnf.toString());
+
+            int numClauses = 1;
+            ArrayList<String> variables = new ArrayList<>();
+            cnfStr = cnf.toString();
+        } catch (ParserException e) {
+//            e.printStackTrace();
+        }
+        return cnfStr;
     }
 
     public int[] singlePointStrategy() {
@@ -293,13 +293,23 @@ public class Agent {
                     if (displMap[y][x] == "+") {
                         String rulesRoundHere = getRules(x, y);
 
-                        if (!satisfiedHere(x,y, rulesRoundHere)) { // x, y
-                            coords = new int[]{x, y};
-                            return coords;
-//                            aTSFound = true;
-//                            System.out.println("ATS found");
-//                            break;
-                        }
+                        String rules4Danger = rulesRoundHere + "& ~D" +x +y;
+//                        System.out.println("Rules4D:    " +rules4Danger);
+                        String dangerCNF = makeCNF(rules4Danger);
+                        IProblem dangerHere = makeDIMACS(dangerCNF);
+
+                        String rules4Safety = rulesRoundHere +"& D" +x +y;
+//                        System.out.println("Rules4S:    " +rules4Safety);
+                        String safetyCNF = makeCNF(rules4Safety);
+                        IProblem safeHere = makeDIMACS(safetyCNF);
+
+//                        if (!satisfiedHere(x,y, rulesRoundHere)) { // x, y
+//                            coords = new int[]{x, y};
+//                            return coords;
+////                            aTSFound = true;
+////                            System.out.println("ATS found");
+////                            break;
+//                        }
                     }
                 }
             }
@@ -373,20 +383,23 @@ public class Agent {
 
     public void printWorld() {
         System.out.println();
-        System.out.print("   ");
+        System.out.print("    ");
         for (int a = 0; a < displMap.length; a++) {
+            if (a <= 10) System.out.print(" ");
             System.out.print(" " +a);
         }
         System.out.println();
-        System.out.print("   ");
+        System.out.print("    ");
         for (int a = 0; a < displMap.length; a++) {
-            System.out.print("__");
+            System.out.print("___");
         }
         System.out.println();
         for (int i = 0; i < displMap.length; i++) {
-            System.out.print(i +" |");
+            System.out.print(i);
+            if (i < 10) System.out.print(" ");
+            System.out.print(" |");
             for (int j = 0; j < displMap.length; j++) {
-                System.out.print(" " +displMap[i][j]);
+                System.out.print("  " +displMap[i][j]);
             }
             System.out.println();
         }
